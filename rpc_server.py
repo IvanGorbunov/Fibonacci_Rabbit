@@ -3,12 +3,13 @@ import pika
 
 from fibonacci import fibonacci
 
-credentials = pika.PlainCredentials('myuser', 'mypassword')
-parameters = pika.ConnectionParameters('localhost',
-                                       5672,
-                                       '/',
-                                       credentials)
-connection = pika.BlockingConnection(parameters)
+credentials = pika.PlainCredentials(username='guest', password='guest')
+parameters = pika.ConnectionParameters(host='rabbitmq',
+                                       port=5672,
+                                       virtual_host='/',
+                                       credentials=credentials
+                                       )
+connection = pika.BlockingConnection(parameters=parameters)
 
 channel = connection.channel()
 

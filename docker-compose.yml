@@ -1,22 +1,52 @@
 version: "3.9"
-services:
-  rabbitmq3:
-    container_name: "rabbitmq"
-    image: rabbitmq:3.8-management-alpine
-    environment:
-      - RABBITMQ_DEFAULT_USER=myuser
-      - RABBITMQ_DEFAULT_PASS=mypassword
-    ports:
-      # AMQP protocol port
-      - '5672:5672'
-      # HTTP management UI
-      - '15672:15672'
-    volumes:
-      - ~/.docker-conf/rabbitmq/data/:/var/lib/rabbitmq/
-      - ~/.docker-conf/rabbitmq/log/:/var/log/rabbitmq
-    networks:
-      - rabbitmq_go_net
 
-networks:
-  rabbitmq_go_net:
-    driver: bridge
+services:
+  rabbitmq:
+    container_name: fib_rabbitmq
+    image: rabbitmq:management
+    restart: always
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:15672" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  server:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: fib_server
+    volumes:
+      - ./:/fibonacci
+    command: >
+      sh -c "./wait-for-it.sh rabbitmq:5672 -- sh ./entrypoint-server.sh"
+    environment:
+      - HOSTNAMERABBIT=rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    links:
+      - rabbitmq
+
+  client:
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    container_name: fib_client
+    volumes:
+      - ./:/fibonacci
+    command: >
+      sh -c "./wait-for-it.sh rabbitmq:5672 -- python3 ./rpc_client.py"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      server:
+        condition: service_healthy
+    links:
+      - rabbitmq

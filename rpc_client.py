@@ -6,16 +6,16 @@ import uuid
 class FibonacciRpcClient(object):
     def __init__(self):
 
-        credentials = pika.PlainCredentials('myuser', 'mypassword')
-        parameters = pika.ConnectionParameters('localhost',
-                                               5672,
-                                               '/',
-                                               credentials)
-
-        self.connection = pika.BlockingConnection(parameters)
+        credentials = pika.PlainCredentials(username='guest', password='guest')
+        parameters = pika.ConnectionParameters(host='rabbitmq',
+                                               port=5672,
+                                               virtual_host='/',
+                                               credentials=credentials
+                                               )
+        self.connection = pika.BlockingConnection(parameters=parameters)
         self.channel = self.connection.channel()
 
-        result = self.channel.queue_declare(queue='fibonacci')#, exclusive=True)
+        result = self.channel.queue_declare(queue='fibonacci')
         self.callback_queue = result.method.queue
         self.channel.basic_consume(on_message_callback=self.on_response, queue=self.callback_queue)
 
